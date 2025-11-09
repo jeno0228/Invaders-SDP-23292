@@ -11,33 +11,66 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️. 소스 코드 체크아웃
+      # 1️⃣ 소스 코드 체크아웃
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️. JDK 17 설치 (필요시 11로 변경 가능)
+      # 2️⃣ JDK 17 설치
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # 3️. Gradle 실행 권한 부여
+      # 3️⃣ Gradle 실행 권한 부여
       - name: Grant execute permission for Gradle wrapper
         run: chmod +x gradlew
 
-      # 4️. Gradle 빌드
+      # 4️⃣ Gradle 빌드
       - name: Build with Gradle
         run: ./gradlew clean build --stacktrace
 
-      # 5️. JUnit 테스트 실행
+      # 5️⃣ JUnit 테스트 실행
       - name: Run tests
         run: ./gradlew test --info
 
-      # 6. 테스트 리포트 업로드
+      # 6️⃣ 테스트 리포트 업로드
       - name: Upload test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: junit-test-report
           path: build/reports/tests/test
+
+      # 7️⃣ Discord 알림 보내기 (성공/실패 모두)
+      - name: Send Discord notification
+        if: always()  # 무조건 실행
+        env:
+          WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          STATUS: ${{ job.status }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ "$STATUS" == "success" ]; then
+            COLOR=3066993  # 🟩 Green
+            EMOJI="✅"
+            TITLE="Build Succeeded"
+          else
+            COLOR=15158332  # 🟥 Red
+            EMOJI="❌"
+            TITLE="Build Failed"
+          fi
+
+          # Discord 메시지 JSON 작성
+          PAYLOAD=$(jq -n \
+            --arg title "$TITLE" \
+            --arg desc "$EMOJI **$REPO**\nBranch: \`$BRANCH\`\nCommit: \`$COMMIT\`\n[View Logs]($RUN_URL)" \
+            --argjson color $COLOR \
+            '{embeds: [{title: $title, description: $desc, color: $color}]}')
+
+          # Discord로 전송
+          curl -H "Content-Type: application/json" \
+               -d "$PAYLOAD" \
+               "$WEBHOOK_URL"
