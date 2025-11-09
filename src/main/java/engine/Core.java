@@ -281,11 +281,4 @@ public final class Core {
 		return new Cooldown(milliseconds, variance);
 	}
 
-
-    /**
-     * test for push(jenkins)
-     */
-    public void blank() {
-        System.out.println("something");
-    }
 }
