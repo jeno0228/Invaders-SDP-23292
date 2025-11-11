@@ -94,4 +94,8 @@ class EnemyShipTest {
     static void afterAll() {
         System.out.println("[END] EnemyShipTest - All tests completed");
     }
+
+    static void something() {
+        System.out.println("Running: something()");
+    }
 }
